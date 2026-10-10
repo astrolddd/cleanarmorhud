@@ -1,0 +1,40 @@
+{
+    "schemaVersion":  1,
+    "id":  "cleanhud",
+    "version":  "${version}",
+    "name":  "Clean Hud",
+    "description":  "A fully customizable, modern armor HUD for Fabric with drag-and-drop positioning and a polished editor.",
+    "authors":  [
+                    "astrolddd"
+                ],
+    "contact":  {
+                    "homepage":  "https://github.com/astrolddd/cleanhud",
+                    "sources":  "https://github.com/astrolddd/cleanhud"
+                },
+    "license":  "Apache-2.0",
+    "icon": "assets/cleanhud/icon.png",
+    "environment":  "client",
+    "entrypoints":  {
+                        "main":  [
+                                     "com.github.astrolddd.cleanhud.CleanHud"
+                                 ],
+                        "client":  [
+                                       "com.github.astrolddd.cleanhud.CleanHudClient"
+                                   ],
+                        "modmenu":  [
+                                        "com.github.astrolddd.cleanhud.compat.CleanHudModMenuApi"
+                                    ]
+                    },
+    "mixins":  [
+                   "cleanhud.mixins.json"
+               ],
+    "depends":  {
+                    "fabricloader":  "\u003e=0.16.0",
+                    "minecraft":  "~26.2",
+                    "java":  "\u003e=25",
+                    "fabric-key-mapping-api-v1":  "*"
+                },
+    "suggests":  {
+                     "modmenu":  "*"
+                 }
+}
