@@ -29,10 +29,21 @@ dependencies {
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	implementation("com.astrolddd.commongui:common-gui:1.0.1") {
+	implementation("com.astrolddd.commongui:common-gui:1.0.31") {
 		exclude group: "net.fabricmc.fabric-api"
 	}
-	include "com.astrolddd.commongui:common-gui:1.0.1"
+	include "com.astrolddd.commongui:common-gui:1.0.31"
+}
+
+loom {
+	runs {
+		client {
+			vmArgs "-Xmx2G"
+			if (project.hasProperty("autotest")) {
+				property "autotest", project.property("autotest").toString()
+			}
+		}
+	}
 }
 
 processResources {
@@ -95,7 +106,7 @@ modrinth {
 	uploadFile = tasks.findByName("remapJar") ?: jar
 	gameVersions = (project.findProperty("game_versions") ? project.findProperty("game_versions").split(",")*.trim() : [project.minecraft_version])
 	loaders = ["fabric"]
-	changelog = "### Changes in 2.1.1:\n- Fixed config screen becoming unusable / overflowing at GUI scales >= 3 (Scale 3, 4, Auto) with dynamic comfortable scale clamping and boundary protection.\n- Automatically restores player's normal in-game GUI scale upon closing config or entering the reposition screen.\n- Added official mod icon in Mod Menu.\n- Updated bundled CommonGUI library."
+	changelog = "- Optimised mod jar size and removed lag while opening/closing gui.\n- Gui revamped.\n- Layout related bug fixes."
 	dependencies {
 		required.project "fabric-api"
 		optional.project "modmenu"
@@ -111,7 +122,7 @@ task publishCurseForge(type: net.darkhax.curseforgegradle.TaskPublishCurseForge)
 	def mainFile = upload(projectId, tasks.findByName("remapJar") ?: jar)
 	mainFile.displayName = "${project.mod_version}"
 	mainFile.releaseType = "release"
-	mainFile.changelog = "### Changes in 2.1.1:\n- Fixed config screen becoming unusable / overflowing at GUI scales >= 3 (Scale 3, 4, Auto) with dynamic comfortable scale clamping and boundary protection.\n- Automatically restores player's normal in-game GUI scale upon closing config or entering the reposition screen.\n- Added official mod icon in Mod Menu.\n- Updated bundled CommonGUI library."
+	mainFile.changelog = "- Optimised mod jar size and removed lag while opening/closing gui.\n- Gui revamped.\n- Layout related bug fixes."
 	mainFile.changelogType = "markdown"
 	mainFile.addRequirement("fabric-api")
 	mainFile.addOptional("modmenu")

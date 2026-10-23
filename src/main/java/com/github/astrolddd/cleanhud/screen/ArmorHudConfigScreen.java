@@ -12,10 +12,6 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Clean Armor HUD configuration screen.
- * Extends CommonGUI's {@link BaseConfigScreen} to eliminate modal boilerplate.
- */
 public class ArmorHudConfigScreen extends BaseConfigScreen {
     private final ArmorHudConfig config;
     private ArmorHudConfig workingCopy;
@@ -25,18 +21,19 @@ public class ArmorHudConfigScreen extends BaseConfigScreen {
     }
 
     public ArmorHudConfigScreen(Screen parent) {
-        super(Component.translatable("screen.cleanhud.config"), parent, "cleanhud", "Clean Armor HUD");
+        super(Component.translatable("screen.cleanhud.config"), parent, "cleanhud", "cleanarmorhud", "CleanArmorHUD");
         this.config = ConfigManager.get();
         this.workingCopy = config.copy();
         UiTheme.setDarkMode(workingCopy.darkTheme);
+        UiTheme.setTransparency(workingCopy.guiOpacity);
+        this.guiScaleMultiplier = workingCopy.guiScale;
     }
 
     @Override
     protected void buildConfig() {
-        // Tab 1: Layout
         ConfigTab layoutTab = addTab("Layout");
 
-        ConfigSection displaySec = layoutTab.addSection("HUD Display & Alignment");
+        ConfigSection displaySec = layoutTab.addSection("HUD Display & Alignment", "Visibility, scale, rotation, and spacing");
         displaySec.addToggle("Enable Armor HUD", workingCopy.enabled, v -> {
             workingCopy.enabled = v;
             onSettingChanged();
@@ -80,7 +77,7 @@ public class ArmorHudConfigScreen extends BaseConfigScreen {
                 onSettingChanged();
             });
 
-        ConfigSection bgSec = layoutTab.addSection("Background & Outline");
+        ConfigSection bgSec = layoutTab.addSection("Background & Outline", "Slot appearance, opacity, and borders");
         bgSec.addToggle("Item Background", workingCopy.showBackground, v -> {
             workingCopy.showBackground = v;
             onSettingChanged();
@@ -93,22 +90,17 @@ public class ArmorHudConfigScreen extends BaseConfigScreen {
                 onSettingChanged();
             });
 
-        bgSec.addToggle("Outline Hotbar", workingCopy.showOutline, v -> {
-            workingCopy.showOutline = v;
-            if (v) {
-                workingCopy.setAlignment(HudAlignment.HORIZONTAL);
-            }
+        bgSec.addToggle("Vanilla Style", workingCopy.isVanillaStyle(), v -> {
+            workingCopy.setVanillaStyle(v);
             onSettingChanged();
-            rebuildTabs();
         });
 
-        ConfigSection posSec = layoutTab.addSection("HUD Position");
+        ConfigSection posSec = layoutTab.addSection("HUD Position", "Drag and drop positioning on screen");
         posSec.addButton("Drag & Drop Reposition HUD", b -> openMoveHudScreen());
 
-        // Tab 2: Durability
         ConfigTab durTab = addTab("Durability");
 
-        ConfigSection readoutSec = durTab.addSection("Durability Readout");
+        ConfigSection readoutSec = durTab.addSection("Durability Readout", "Text format, scale, and numeric values");
         var modeItems = List.of(
             new DropdownItem<>(DurabilityMode.PERCENTAGE, "Percentage (%)", null),
             new DropdownItem<>(DurabilityMode.NUMERIC, "Numeric (Current/Max)", null),
@@ -136,7 +128,7 @@ public class ArmorHudConfigScreen extends BaseConfigScreen {
                 onSettingChanged();
             });
 
-        ConfigSection barSec = durTab.addSection("Durability Bar & Color");
+        ConfigSection barSec = durTab.addSection("Durability Bar & Color", "Progress bars and dynamic coloring");
         barSec.addToggle("Show Durability Bar", workingCopy.showDurabilityBar, v -> {
             workingCopy.showDurabilityBar = v;
             onSettingChanged();
@@ -147,10 +139,9 @@ public class ArmorHudConfigScreen extends BaseConfigScreen {
             onSettingChanged();
         });
 
-        // Tab 3: Hand Slots
         ConfigTab handsTab = addTab("Hand Slots");
 
-        ConfigSection mainhandSec = handsTab.addSection("Main Hand Slot");
+        ConfigSection mainhandSec = handsTab.addSection("Main Hand Slot", "Display held item in primary hand");
         mainhandSec.addToggle("Show Main Hand", workingCopy.showMainHandItem, v -> {
             workingCopy.showMainHandItem = v;
             onSettingChanged();
@@ -170,19 +161,80 @@ public class ArmorHudConfigScreen extends BaseConfigScreen {
             onSettingChanged();
         });
 
-        ConfigSection offhandSec = handsTab.addSection("Off-Hand Slot");
+        ConfigSection offhandSec = handsTab.addSection("Off-Hand Slot", "Display shield or held secondary item");
         offhandSec.addToggle("Show Offhand", workingCopy.showOffhandItem, v -> {
             workingCopy.showOffhandItem = v;
             onSettingChanged();
         });
 
-        // Tab 4: Warnings
         ConfigTab warningsTab = addTab("Warnings");
 
-        ConfigSection alertsSec = warningsTab.addSection("Durability Alerts");
+        ConfigSection alertsSec = warningsTab.addSection("Durability Alerts", "Item break warnings and sound cues");
         alertsSec.addToggle("Durability Warning", workingCopy.durabilityWarning, v -> {
             workingCopy.durabilityWarning = v;
             onSettingChanged();
+        });
+
+        alertsSec.addToggle("Play Break Sound", workingCopy.playBreakSound, v -> {
+            workingCopy.playBreakSound = v;
+            onSettingChanged();
+        });
+
+        alertsSec.getEntries().add(new com.astrolddd.commongui.screen.ConfigEntry() {
+            @Override
+            public int getHeight() {
+                return 23;
+            }
+
+            @Override
+            public List<com.astrolddd.commongui.widget.Widget> createWidgets(int x, int y, int width) {
+                int ctrlW = 52;
+                int labelW = width - ctrlW - 8;
+                com.astrolddd.commongui.widget.Widget labelWidget = new com.astrolddd.commongui.widget.Widget(x, y, labelW, 23) {
+                    @Override
+                    public void extractWidgetRenderState(net.minecraft.client.gui.GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+                        net.minecraft.client.gui.Font f = net.minecraft.client.Minecraft.getInstance().font;
+                        g.text(f, UiTheme.text("Sound Plays"), this.x, this.y + 5, UiTheme.TEXT_PRIMARY, false);
+                    }
+                };
+                NumberStepperWidget stepper = new NumberStepperWidget(x + width - ctrlW, y + 2, ctrlW, 17, 1, 99, workingCopy.breakSoundCount, v -> {
+                    workingCopy.breakSoundCount = v;
+                    onSettingChanged();
+                });
+                return List.of(labelWidget, stepper);
+            }
+        });
+
+        alertsSec.addSlider("Sound Interval", 0.1, 10.0, workingCopy.breakSoundInterval, 1.0,
+            val -> String.format(Locale.ROOT, "%.1fs", val),
+            val -> {
+                workingCopy.breakSoundInterval = Math.round(val.floatValue() * 10.0f) / 10.0f;
+                onSettingChanged();
+            });
+
+        alertsSec.getEntries().add(new com.astrolddd.commongui.screen.ConfigEntry() {
+            @Override
+            public int getHeight() {
+                return 23;
+            }
+
+            @Override
+            public List<com.astrolddd.commongui.widget.Widget> createWidgets(int x, int y, int width) {
+                int btnW = 64;
+                int labelW = width - btnW - 8;
+                com.astrolddd.commongui.widget.Widget labelWidget = new com.astrolddd.commongui.widget.Widget(x, y, labelW, 23) {
+                    @Override
+                    public void extractWidgetRenderState(net.minecraft.client.gui.GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+                        net.minecraft.client.gui.Font f = net.minecraft.client.Minecraft.getInstance().font;
+                        g.text(f, UiTheme.text("Test Sound"), this.x, this.y + 5, UiTheme.TEXT_PRIMARY, false);
+                    }
+                };
+                com.astrolddd.commongui.widget.RoundedButton testBtn = new com.astrolddd.commongui.widget.RoundedButton(
+                    x + width - btnW, y + 2, btnW, 17, Component.literal("Play"),
+                    b -> com.github.astrolddd.cleanhud.CleanHudClient.triggerWarningSoundBurst(workingCopy.breakSoundCount, workingCopy.breakSoundInterval)
+                );
+                return List.of(labelWidget, testBtn);
+            }
         });
 
         alertsSec.addSlider("Warning At", 1, 100, workingCopy.durabilityWarningThreshold, 20,
@@ -192,11 +244,31 @@ public class ArmorHudConfigScreen extends BaseConfigScreen {
                 onSettingChanged();
             });
 
-        ConfigSection vanillaSec = warningsTab.addSection("Vanilla Integration");
+        ConfigSection vanillaSec = warningsTab.addSection("Vanilla Integration", "Vanilla armor bar replacement settings");
         vanillaSec.addToggle("Hide Vanilla Armor Bar", workingCopy.hideVanillaArmorBar, v -> {
             workingCopy.hideVanillaArmorBar = v;
             onSettingChanged();
         });
+
+        ConfigTab guiTab = addTab("GUI");
+
+        ConfigSection windowSec = guiTab.addSection("Window Appearance", "Scale and transparency of the configuration window");
+
+        windowSec.addSlider("GUI Size", 0.70, 1.30, workingCopy.guiScale, 1.00,
+            val -> String.format(Locale.ROOT, "%.0f%%", val * 100),
+            val -> {
+                workingCopy.guiScale = val.floatValue();
+                setGuiScaleMultiplier(workingCopy.guiScale);
+                onSettingChanged();
+            });
+
+        windowSec.addSlider("Transparency Level", 0.20, 1.00, workingCopy.guiOpacity, 0.80,
+            val -> val >= 0.99 ? "100% (Opaque)" : String.format(Locale.ROOT, "%.0f%%", val * 100),
+            val -> {
+                workingCopy.guiOpacity = val.floatValue();
+                UiTheme.setTransparency(workingCopy.guiOpacity);
+                onSettingChanged();
+            });
     }
 
     private void openMoveHudScreen() {
@@ -217,6 +289,9 @@ public class ArmorHudConfigScreen extends BaseConfigScreen {
     @Override
     protected void onResetDefaults() {
         workingCopy = new ArmorHudConfig();
+        UiTheme.setDarkMode(workingCopy.darkTheme);
+        UiTheme.setTransparency(workingCopy.guiOpacity);
+        setGuiScaleMultiplier(workingCopy.guiScale);
     }
 
     @Override
@@ -235,4 +310,3 @@ public class ArmorHudConfigScreen extends BaseConfigScreen {
         com.astrolddd.commongui.draw.Draw.roundedOutline(graphics, x, y, width, height, radius, 1, border);
     }
 }
-

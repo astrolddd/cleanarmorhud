@@ -18,7 +18,20 @@ public class ArmorHudConfig {
 	public MainHandPosition mainHandPosition = MainHandPosition.ABOVE;
 	public boolean showBackground = true;
 	public float backgroundOpacity = 0.35f;
+	public boolean vanillaStyle = false;
 	public boolean showOutline = false;
+	public boolean playBreakSound = true;
+	public int breakSoundCount = 1;
+	public float breakSoundInterval = 1.0f;
+
+	public boolean isVanillaStyle() {
+		return vanillaStyle || showOutline;
+	}
+
+	public void setVanillaStyle(boolean val) {
+		this.vanillaStyle = val;
+		this.showOutline = val;
+	}
 	public int spacing = 1;
 	public int padding = 0;
 	public HudAlignment alignment = HudAlignment.VERTICAL;
@@ -26,7 +39,9 @@ public class ArmorHudConfig {
 	public boolean durabilityWarning = false;
 	public int durabilityWarningThreshold = 20;
 	public GuiTheme guiTheme = GuiTheme.DEFAULT;
-	public boolean darkTheme = true;
+	public boolean darkTheme = false;
+	public float guiScale = 1.0f;
+	public float guiOpacity = 0.80f;
 
 	public int savedVerticalSpacing = 1;
 	public DurabilityTextPosition savedVerticalTextPosition = DurabilityTextPosition.RIGHT;
@@ -45,7 +60,6 @@ public class ArmorHudConfig {
 			this.alignment = HudAlignment.VERTICAL;
 			this.spacing = this.savedVerticalSpacing;
 			this.durabilityTextPosition = this.savedVerticalTextPosition != null ? this.savedVerticalTextPosition : DurabilityTextPosition.RIGHT;
-			this.showOutline = false;
 		}
 	}
 
@@ -68,7 +82,11 @@ public class ArmorHudConfig {
 		copy.mainHandPosition = mainHandPosition;
 		copy.showBackground = showBackground;
 		copy.backgroundOpacity = backgroundOpacity;
-		copy.showOutline = showOutline;
+		copy.vanillaStyle = isVanillaStyle();
+		copy.showOutline = copy.vanillaStyle;
+		copy.playBreakSound = playBreakSound;
+		copy.breakSoundCount = breakSoundCount;
+		copy.breakSoundInterval = breakSoundInterval;
 		copy.spacing = spacing;
 		copy.padding = padding;
 		copy.alignment = alignment;
@@ -77,41 +95,11 @@ public class ArmorHudConfig {
 		copy.durabilityWarningThreshold = durabilityWarningThreshold;
 		copy.guiTheme = guiTheme;
 		copy.darkTheme = darkTheme;
+		copy.guiScale = guiScale;
+		copy.guiOpacity = guiOpacity;
 		copy.savedVerticalSpacing = savedVerticalSpacing;
 		copy.savedVerticalTextPosition = savedVerticalTextPosition;
 		return copy;
-	}
-
-	public void apply(ArmorHudConfig other) {
-		if (other == null) return;
-		this.enabled = other.enabled;
-		this.posX = other.posX;
-		this.posY = other.posY;
-		this.useRelativePosition = other.useRelativePosition;
-		this.scale = other.scale;
-		this.rotation = other.rotation;
-		this.durabilityMode = other.durabilityMode;
-		this.durabilityTextPosition = other.durabilityTextPosition;
-		this.durabilityTextScale = other.durabilityTextScale;
-		this.matchTextColorToBar = other.matchTextColorToBar;
-		this.showDurabilityBar = other.showDurabilityBar;
-		this.showOffhandItem = other.showOffhandItem;
-		this.showMainHandItem = other.showMainHandItem;
-		this.mainHandToolsOnly = other.mainHandToolsOnly;
-		this.mainHandPosition = other.mainHandPosition;
-		this.showBackground = other.showBackground;
-		this.backgroundOpacity = other.backgroundOpacity;
-		this.showOutline = other.showOutline;
-		this.spacing = other.spacing;
-		this.padding = other.padding;
-		this.alignment = other.alignment;
-		this.hideVanillaArmorBar = other.hideVanillaArmorBar;
-		this.durabilityWarning = other.durabilityWarning;
-		this.durabilityWarningThreshold = other.durabilityWarningThreshold;
-		this.guiTheme = other.guiTheme;
-		this.darkTheme = other.darkTheme;
-		this.savedVerticalSpacing = other.savedVerticalSpacing;
-		this.savedVerticalTextPosition = other.savedVerticalTextPosition;
 	}
 
 	public int resolveX(int screenWidth) {
@@ -144,6 +132,8 @@ public class ArmorHudConfig {
 		padding = clamp(padding, 0, 8);
 		backgroundOpacity = clamp(backgroundOpacity, 0.0f, 1.0f);
 		durabilityWarningThreshold = clamp(durabilityWarningThreshold, 1, 100);
+		breakSoundCount = clamp(breakSoundCount, 1, 99);
+		breakSoundInterval = clamp(breakSoundInterval, 0.1f, 10.0f);
 		if (durabilityMode == null) {
 			durabilityMode = DurabilityMode.PERCENTAGE;
 		}
@@ -164,10 +154,17 @@ public class ArmorHudConfig {
 		if (guiTheme == null) {
 			guiTheme = GuiTheme.DEFAULT;
 		}
+		guiScale = clamp(guiScale, 0.70f, 1.30f);
+		guiOpacity = clamp(guiOpacity, 0.20f, 1.00f);
 		if (useRelativePosition) {
 			posX = clamp(posX, 0.0f, 1.0f);
 			posY = clamp(posY, 0.0f, 1.0f);
 		}
+		if (showOutline && !vanillaStyle) {
+			vanillaStyle = true;
+		}
+		showOutline = isVanillaStyle();
+		vanillaStyle = showOutline;
 	}
 
 	private static int clamp(int value, int min, int max) {
@@ -200,7 +197,10 @@ public class ArmorHudConfig {
 			mainHandPosition == other.mainHandPosition &&
 			showBackground == other.showBackground &&
 			Float.compare(other.backgroundOpacity, backgroundOpacity) == 0 &&
-			showOutline == other.showOutline &&
+			isVanillaStyle() == other.isVanillaStyle() &&
+			playBreakSound == other.playBreakSound &&
+			breakSoundCount == other.breakSoundCount &&
+			Float.compare(other.breakSoundInterval, breakSoundInterval) == 0 &&
 			spacing == other.spacing &&
 			padding == other.padding &&
 			alignment == other.alignment &&
@@ -208,8 +208,45 @@ public class ArmorHudConfig {
 			durabilityWarning == other.durabilityWarning &&
 			durabilityWarningThreshold == other.durabilityWarningThreshold &&
 			guiTheme == other.guiTheme &&
-			darkTheme == other.darkTheme;
+			darkTheme == other.darkTheme &&
+			Float.compare(other.guiScale, guiScale) == 0 &&
+			Float.compare(other.guiOpacity, guiOpacity) == 0;
+	}
+
+	public void apply(ArmorHudConfig other) {
+		if (other == null) return;
+		this.enabled = other.enabled;
+		this.posX = other.posX;
+		this.posY = other.posY;
+		this.useRelativePosition = other.useRelativePosition;
+		this.scale = other.scale;
+		this.rotation = other.rotation;
+		this.durabilityMode = other.durabilityMode;
+		this.durabilityTextPosition = other.durabilityTextPosition;
+		this.durabilityTextScale = other.durabilityTextScale;
+		this.matchTextColorToBar = other.matchTextColorToBar;
+		this.showDurabilityBar = other.showDurabilityBar;
+		this.showOffhandItem = other.showOffhandItem;
+		this.showMainHandItem = other.showMainHandItem;
+		this.mainHandToolsOnly = other.mainHandToolsOnly;
+		this.mainHandPosition = other.mainHandPosition;
+		this.showBackground = other.showBackground;
+		this.backgroundOpacity = other.backgroundOpacity;
+		this.setVanillaStyle(other.isVanillaStyle());
+		this.playBreakSound = other.playBreakSound;
+		this.breakSoundCount = other.breakSoundCount;
+		this.breakSoundInterval = other.breakSoundInterval;
+		this.spacing = other.spacing;
+		this.padding = other.padding;
+		this.alignment = other.alignment;
+		this.hideVanillaArmorBar = other.hideVanillaArmorBar;
+		this.durabilityWarning = other.durabilityWarning;
+		this.durabilityWarningThreshold = other.durabilityWarningThreshold;
+		this.guiTheme = other.guiTheme;
+		this.darkTheme = other.darkTheme;
+		this.guiScale = other.guiScale;
+		this.guiOpacity = other.guiOpacity;
+		this.savedVerticalSpacing = other.savedVerticalSpacing;
+		this.savedVerticalTextPosition = other.savedVerticalTextPosition;
 	}
 }
-
-

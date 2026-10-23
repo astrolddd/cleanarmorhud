@@ -23,7 +23,9 @@ import java.util.List;
 public class CleanHudClient implements ClientModInitializer {
 	public static final Identifier ARMOR_HUD_ID = Identifier.fromNamespaceAndPath(CleanHud.MOD_ID, "armor_hud");
 	public static KeyMapping OPEN_CONFIG_KEY;
-	private static int warningCooldownTicks;
+	private static int remainingBurstSounds = 0;
+	private static long nextBurstTimeMillis = 0L;
+	private static long burstIntervalMillis = 1000L;
 
 	@Override
 	public void onInitializeClient() {
@@ -38,10 +40,41 @@ public class CleanHudClient implements ClientModInitializer {
 
 		ClientTickEvents.END_CLIENT_TICK.register(CleanHudClient::handleClientTick);
 
+		if ("true".equalsIgnoreCase(System.getProperty("autotest")) || "cleanhud".equalsIgnoreCase(System.getProperty("autotest"))) {
+			com.github.astrolddd.cleanhud.test.CleanHudAutoTestRunner.init();
+		}
+
 		CleanHud.LOGGER.info("CleanHud client initialized");
 	}
 
+	public static void triggerWarningSoundBurst(int count, float intervalSeconds) {
+		Minecraft client = Minecraft.getInstance();
+		if (client == null) return;
+		int clampedCount = Math.clamp(count, 1, 99);
+		long intervalMs = Math.max(100L, Math.round(intervalSeconds * 1000.0f));
+		client.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_BREAK, 1.0F));
+		remainingBurstSounds = clampedCount - 1;
+		burstIntervalMillis = intervalMs;
+		nextBurstTimeMillis = System.currentTimeMillis() + intervalMs;
+	}
+
+	private static void tickWarningSoundBurst(Minecraft client) {
+		if (remainingBurstSounds <= 0) {
+			return;
+		}
+		long now = System.currentTimeMillis();
+		if (now >= nextBurstTimeMillis) {
+			client.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_BREAK, 1.0F));
+			remainingBurstSounds--;
+			nextBurstTimeMillis = now + burstIntervalMillis;
+		}
+	}
+
 	public static void handleClientTick(Minecraft client) {
+		if (com.github.astrolddd.cleanhud.test.CleanHudAutoTestRunner.isRunning()) {
+			com.github.astrolddd.cleanhud.test.CleanHudAutoTestRunner.tick(client);
+		}
+
 		if (OPEN_CONFIG_KEY != null) {
 			while (OPEN_CONFIG_KEY.consumeClick()) {
 				if (client.player != null) {
@@ -49,40 +82,7 @@ public class CleanHudClient implements ClientModInitializer {
 				}
 			}
 		}
-		checkDurabilityWarning(client);
-	}
-
-	private static void checkDurabilityWarning(Minecraft client) {
-		ArmorHudConfig config = ConfigManager.get();
-		if (!config.enabled || !config.durabilityWarning || client.player == null) {
-			warningCooldownTicks = Math.max(0, warningCooldownTicks - 1);
-			return;
-		}
-		if (warningCooldownTicks > 0) {
-			warningCooldownTicks--;
-			return;
-		}
-		List<ItemStack> stacks = ArmorHudRenderer.collectArmorStacks(client.player);
-		for (int i = 0; i < stacks.size(); i++) {
-			if (i == 0 && !config.showOffhandItem || i == 1 && !config.showMainHandItem) {
-				continue;
-			}
-			ItemStack stack = stacks.get(i);
-			if (stack.isEmpty() || !stack.isDamageableItem()) {
-				continue;
-			}
-			int maxDamage = stack.getMaxDamage();
-			if (maxDamage <= 0) {
-				continue;
-			}
-			int remaining = Math.max(0, maxDamage - stack.getDamageValue());
-			int percent = (int) Math.ceil(remaining * 100.0 / maxDamage);
-			if (percent <= config.durabilityWarningThreshold) {
-				client.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.ITEM_BREAK, 1.0F));
-				warningCooldownTicks = 80;
-				return;
-			}
-		}
+		tickWarningSoundBurst(client);
 	}
 
 	public static void renderArmorHud(GuiGraphicsExtractor graphics, DeltaTracker tickCounter) {

@@ -2,7 +2,7 @@
     "schemaVersion":  1,
     "id":  "cleanhud",
     "version":  "${version}",
-    "name":  "Clean Hud",
+    "name":  "CleanArmorHUD",
     "description":  "A fully customizable, modern armor HUD for Fabric with drag-and-drop positioning and a polished editor.",
     "authors":  [
                     "astrolddd"

@@ -9,6 +9,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
@@ -32,7 +34,6 @@ public final class ArmorHudRenderer {
 		EquipmentSlot.FEET
 	};
 
-	// Single-trigger warning sound tracking (plays ONCE per item)
 	private static final Set<EquipmentSlot> WARNED_ARMOR = EnumSet.noneOf(EquipmentSlot.class);
 	private static boolean warnedOffhand = false;
 	private static boolean warnedMainhand = false;
@@ -67,8 +68,8 @@ public final class ArmorHudRenderer {
 	}
 
 	public static int measureWidth(ArmorHudConfig config, List<ItemStack> armorStacks) {
-		if (config.showOutline) {
-			return OutlineHotbarRenderer.measureWidth(config, armorStacks);
+		if (config.isVanillaStyle()) {
+			return VanillaHotbarRenderer.measureWidth(config, armorStacks);
 		}
 		if (!hasVisibleStack(config, armorStacks)) {
 			return 0;
@@ -82,8 +83,8 @@ public final class ArmorHudRenderer {
 	}
 
 	public static int measureHeight(ArmorHudConfig config, List<ItemStack> armorStacks) {
-		if (config.showOutline) {
-			return OutlineHotbarRenderer.measureHeight(config, armorStacks);
+		if (config.isVanillaStyle()) {
+			return VanillaHotbarRenderer.measureHeight(config, armorStacks);
 		}
 		if (!hasVisibleStack(config, armorStacks)) {
 			return 0;
@@ -97,8 +98,8 @@ public final class ArmorHudRenderer {
 	}
 
 	public static int measureVisualWidth(ArmorHudConfig config, List<ItemStack> armorStacks) {
-		if (config.showOutline) {
-			return OutlineHotbarRenderer.measureVisualWidth(config, armorStacks);
+		if (config.isVanillaStyle()) {
+			return VanillaHotbarRenderer.measureVisualWidth(config, armorStacks);
 		}
 		int width = measureWidth(config, armorStacks);
 		int height = measureHeight(config, armorStacks);
@@ -109,8 +110,8 @@ public final class ArmorHudRenderer {
 	}
 
 	public static int measureVisualHeight(ArmorHudConfig config, List<ItemStack> armorStacks) {
-		if (config.showOutline) {
-			return OutlineHotbarRenderer.measureVisualHeight(config, armorStacks);
+		if (config.isVanillaStyle()) {
+			return VanillaHotbarRenderer.measureVisualHeight(config, armorStacks);
 		}
 		int width = measureWidth(config, armorStacks);
 		int height = measureHeight(config, armorStacks);
@@ -121,8 +122,8 @@ public final class ArmorHudRenderer {
 	}
 
 	public static HudBounds visualBounds(ArmorHudConfig config, List<ItemStack> armorStacks, int screenWidth, int screenHeight) {
-		if (config.showOutline) {
-			return OutlineHotbarRenderer.visualBounds(config, armorStacks, screenWidth, screenHeight);
+		if (config.isVanillaStyle()) {
+			return VanillaHotbarRenderer.visualBounds(config, armorStacks, screenWidth, screenHeight);
 		}
 		int fallbackX = visualX(config, armorStacks, screenWidth);
 		int fallbackY = visualY(config, armorStacks, screenHeight);
@@ -214,15 +215,15 @@ public final class ArmorHudRenderer {
 	}
 
 	public static int visualX(ArmorHudConfig config, List<ItemStack> armorStacks, int screenWidth) {
-		if (config.showOutline) {
-			return OutlineHotbarRenderer.renderX(config, armorStacks, screenWidth);
+		if (config.isVanillaStyle()) {
+			return VanillaHotbarRenderer.renderX(config, armorStacks, screenWidth);
 		}
 		return renderX(config, armorStacks, screenWidth);
 	}
 
 	public static int visualY(ArmorHudConfig config, List<ItemStack> armorStacks, int screenHeight) {
-		if (config.showOutline) {
-			return OutlineHotbarRenderer.renderY(config, armorStacks, screenHeight);
+		if (config.isVanillaStyle()) {
+			return VanillaHotbarRenderer.renderY(config, armorStacks, screenHeight);
 		}
 		return renderY(config, armorStacks, screenHeight);
 	}
@@ -280,14 +281,18 @@ public final class ArmorHudRenderer {
 	}
 
 	public static void render(GuiGraphicsExtractor graphics, ArmorHudConfig config, List<ItemStack> armorStacks, int screenWidth, int screenHeight) {
-		if (config.showOutline) {
-			OutlineHotbarRenderer.render(graphics, config, armorStacks, screenWidth, screenHeight, false);
-			return;
-		}
-		if (!config.enabled || armorStacks.isEmpty() || countVisible(config, armorStacks) == 0) {
+		if (!config.enabled || armorStacks == null || armorStacks.isEmpty()) {
 			return;
 		}
 		checkAndPlayWarningSounds(config, armorStacks);
+
+		if (config.isVanillaStyle()) {
+			VanillaHotbarRenderer.render(graphics, config, armorStacks, screenWidth, screenHeight, false);
+			return;
+		}
+		if (countVisible(config, armorStacks) == 0) {
+			return;
+		}
 
 		int hudWidth = measureWidth(config, armorStacks);
 		int hudHeight = measureHeight(config, armorStacks);
@@ -297,11 +302,11 @@ public final class ArmorHudRenderer {
 	}
 
 	public static void renderEditor(GuiGraphicsExtractor graphics, ArmorHudConfig config, List<ItemStack> armorStacks, int screenWidth, int screenHeight) {
-		if (config.showOutline) {
-			OutlineHotbarRenderer.render(graphics, config, armorStacks, screenWidth, screenHeight, true);
+		if (config.isVanillaStyle()) {
+			VanillaHotbarRenderer.render(graphics, config, armorStacks, screenWidth, screenHeight, true);
 			return;
 		}
-		if (armorStacks.isEmpty() || countVisible(config, armorStacks) == 0) {
+		if (armorStacks == null || armorStacks.isEmpty() || countVisible(config, armorStacks) == 0) {
 			return;
 		}
 
@@ -313,31 +318,31 @@ public final class ArmorHudRenderer {
 	}
 
 	private static void checkAndPlayWarningSounds(ArmorHudConfig config, List<ItemStack> armorStacks) {
-		if (!config.durabilityWarning || armorStacks.size() < 6) {
+		if (!config.durabilityWarning || !config.playBreakSound || armorStacks.size() < 6) {
 			return;
 		}
 		Minecraft client = Minecraft.getInstance();
-		if (client == null || client.player == null) return;
+		if (client == null || client.player == null || client.isPaused()) return;
 
 		for (int i = 0; i < armorStacks.size(); i++) {
 			ItemStack stack = armorStacks.get(i);
 			boolean isWarning = isWarningStack(config, stack);
 
-			if (i == 0) { // Offhand
+			if (i == 0) {
 				if (isWarning && !warnedOffhand) {
 					warnedOffhand = true;
 					playWarningSound(client);
 				} else if (!isWarning) {
 					warnedOffhand = false;
 				}
-			} else if (i == 1) { // Mainhand
+			} else if (i == 1) {
 				if (isWarning && !warnedMainhand) {
 					warnedMainhand = true;
 					playWarningSound(client);
 				} else if (!isWarning) {
 					warnedMainhand = false;
 				}
-			} else { // Armor slots 2-5
+			} else {
 				EquipmentSlot slot = ARMOR_SLOTS[i - 2];
 				if (isWarning && !WARNED_ARMOR.contains(slot)) {
 					WARNED_ARMOR.add(slot);
@@ -349,8 +354,13 @@ public final class ArmorHudRenderer {
 		}
 	}
 
+	public static void triggerWarningSoundBurst(int count, float intervalSeconds) {
+		com.github.astrolddd.cleanhud.CleanHudClient.triggerWarningSoundBurst(count, intervalSeconds);
+	}
+
 	private static void playWarningSound(Minecraft client) {
-		client.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.4F));
+		ArmorHudConfig config = com.github.astrolddd.cleanhud.config.ConfigManager.get();
+		com.github.astrolddd.cleanhud.CleanHudClient.triggerWarningSoundBurst(config.breakSoundCount, config.breakSoundInterval);
 	}
 
 	private static int measureAnchorHeight(ArmorHudConfig config, List<ItemStack> armorStacks) {
@@ -365,9 +375,21 @@ public final class ArmorHudRenderer {
 		return slotHeight;
 	}
 
+	private static int measureAnchorWidth(ArmorHudConfig config, List<ItemStack> armorStacks) {
+		int slotWidth = slotWidth(config, armorStacks);
+		if (config.alignment == HudAlignment.HORIZONTAL) {
+			int armorCols = visibleArmorRows(config, armorStacks);
+			if (armorCols == 0) {
+				armorCols = Math.max(1, visibleHandRows(config, armorStacks));
+			}
+			return slotWidth * armorCols + config.spacing * Math.max(0, armorCols - 1);
+		}
+		return slotWidth;
+	}
+
 	private static int renderX(ArmorHudConfig config, List<ItemStack> armorStacks, int screenWidth) {
 		int x = config.resolveX(screenWidth);
-		int maxX = Math.max(0, screenWidth - measureVisualWidth(config, armorStacks));
+		int maxX = Math.max(0, screenWidth - measureAnchorWidth(config, armorStacks));
 		return clamp(x, 0, maxX);
 	}
 
@@ -464,7 +486,6 @@ public final class ArmorHudRenderer {
 			}
 		}
 
-		// WARNING MARKER POSITIONING - STRICTLY OPPOSITE OF THE TEXT!
 		if (isWarningStack(config, stack)) {
 			int warningX;
 			int warningY;
@@ -475,7 +496,7 @@ public final class ArmorHudRenderer {
 				} else if (config.durabilityTextPosition == DurabilityTextPosition.LEFT) {
 					warningX = itemX + 16 + padding + 4;
 					warningY = itemY + 4;
-				} else { // BELOW
+				} else {
 					warningX = itemX + 4;
 					warningY = y - 10;
 				}
@@ -557,20 +578,6 @@ public final class ArmorHudRenderer {
 			int color = (alpha << 24) | 0x05070D;
 			graphics.fill(x, y, x + width, y + height, color);
 		}
-		if (config.showOutline) {
-			drawHotbarOutline(graphics, x, y, width, height);
-		}
-	}
-
-	private static void drawHotbarOutline(GuiGraphicsExtractor graphics, int x, int y, int width, int height) {
-		graphics.fill(x - 1, y - 1, x + width + 1, y, 0xFF373737);
-		graphics.fill(x - 1, y - 1, x, y + height + 1, 0xFF373737);
-		graphics.fill(x + width, y - 1, x + width + 1, y + height + 1, 0xFFFFFFFF);
-		graphics.fill(x - 1, y + height, x + width + 1, y + height + 1, 0xFFFFFFFF);
-		graphics.fill(x, y, x + width, y + 1, 0xFF8B8B8B);
-		graphics.fill(x, y, x + 1, y + height, 0xFF8B8B8B);
-		graphics.fill(x + width - 1, y, x + width, y + height, 0xFF373737);
-		graphics.fill(x, y + height - 1, x + width, y + height, 0xFF373737);
 	}
 
 	public static boolean isToolOrWeapon(ItemStack stack) {
@@ -631,42 +638,48 @@ public final class ArmorHudRenderer {
 
 	private static int verticalSlotY(ArmorHudConfig config, List<ItemStack> armorStacks, int index, int armorIndex, int strideY) {
 		if (index >= 2) {
-			return armorIndex * strideY; // Armor slots are ALWAYS 0, 1, 2, 3 — NEVER SHIFT!
+			return armorIndex * strideY;
 		}
 
 		boolean offhandVisible = shouldRenderStack(config, armorStacks, 0, armorStacks.get(0));
 
-		if (index == 0) { // Offhand ALWAYS stays ABOVE armor (-1 * strideY)!
+		if (index == 0) {
 			return -1 * strideY;
 		}
 
-		// Mainhand (index 1)
-		if (config.mainHandPosition == MainHandPosition.BELOW) {
-			int armorRows = visibleArmorRows(config, armorStacks);
-			return armorRows * strideY; // Directly after boots!
-		} else { // ABOVE
-			return (offhandVisible ? -2 : -1) * strideY;
+		if (index == 1) {
+			if (config.mainHandPosition == MainHandPosition.BELOW) {
+				int armorRows = visibleArmorRows(config, armorStacks);
+				return armorRows * strideY;
+			} else {
+				return (offhandVisible ? -2 : -1) * strideY;
+			}
 		}
+
+		return 0;
 	}
 
 	private static int horizontalSlotX(ArmorHudConfig config, List<ItemStack> armorStacks, int index, int strideX) {
 		if (index >= 2) {
-			return armorBeforeCount(config, armorStacks, index) * strideX; // Armor slots ALWAYS 0, 1, 2, 3 — NEVER SHIFT!
+			return armorBeforeCount(config, armorStacks, index) * strideX;
 		}
 
 		boolean offhandVisible = shouldRenderStack(config, armorStacks, 0, armorStacks.get(0));
 
-		if (index == 0) { // Offhand ALWAYS stays BEFORE armor (-1 * strideX)!
+		if (index == 0) {
 			return -1 * strideX;
 		}
 
-		// Mainhand (index 1)
-		if (config.mainHandPosition == MainHandPosition.BELOW) {
-			int armorCount = visibleArmorRows(config, armorStacks);
-			return armorCount * strideX; // Directly after boots!
-		} else { // ABOVE
-			return (offhandVisible ? -2 : -1) * strideX;
+		if (index == 1) {
+			if (config.mainHandPosition == MainHandPosition.BELOW) {
+				int armorCount = visibleArmorRows(config, armorStacks);
+				return armorCount * strideX;
+			} else {
+				return (offhandVisible ? -2 : -1) * strideX;
+			}
 		}
+
+		return 0;
 	}
 
 	private static int armorBeforeCount(ArmorHudConfig config, List<ItemStack> armorStacks, int index) {
@@ -799,28 +812,41 @@ public final class ArmorHudRenderer {
 	}
 
 	public static List<ItemStack> previewStacks() {
+		List<ItemStack> preview = new ArrayList<>(6);
+		preview.add(safePreviewItem(net.minecraft.world.item.Items.SHIELD, 336));
+		preview.add(safePreviewItem(net.minecraft.world.item.Items.DIAMOND_SWORD, 1561));
+		preview.add(safePreviewItem(net.minecraft.world.item.Items.DIAMOND_HELMET, 363));
+		preview.add(safePreviewItem(net.minecraft.world.item.Items.DIAMOND_CHESTPLATE, 528));
+		preview.add(safePreviewItem(net.minecraft.world.item.Items.DIAMOND_LEGGINGS, 495));
+		preview.add(safePreviewItem(net.minecraft.world.item.Items.DIAMOND_BOOTS, 429));
+
 		Player player = Minecraft.getInstance().player;
 		if (player != null) {
 			List<ItemStack> armor = collectArmorStacks(player);
-			boolean hasArmor = armor.stream().anyMatch(stack -> !stack.isEmpty());
-			if (hasArmor) {
-				return armor;
+			for (int i = 0; i < Math.min(armor.size(), preview.size()); i++) {
+				ItemStack stack = armor.get(i);
+				if (!stack.isEmpty() && (i != 1 || isToolOrWeapon(stack))) {
+					preview.set(i, stack);
+				}
 			}
-		}
-
-		List<ItemStack> preview = new ArrayList<>(6);
-		preview.add(net.minecraft.world.item.Items.SHIELD.getDefaultInstance());
-		preview.add(net.minecraft.world.item.Items.DIAMOND_SWORD.getDefaultInstance());
-		preview.add(net.minecraft.world.item.Items.DIAMOND_HELMET.getDefaultInstance());
-		preview.add(net.minecraft.world.item.Items.DIAMOND_CHESTPLATE.getDefaultInstance());
-		preview.add(net.minecraft.world.item.Items.DIAMOND_LEGGINGS.getDefaultInstance());
-		preview.add(net.minecraft.world.item.Items.DIAMOND_BOOTS.getDefaultInstance());
-		for (ItemStack stack : preview) {
-			stack.setDamageValue(stack.getMaxDamage() / 3);
 		}
 		return preview;
 	}
+
+	private static ItemStack safePreviewItem(net.minecraft.world.item.Item item, int maxDamage) {
+		try {
+			ItemStack stack = item.getDefaultInstance();
+			if (stack != null && !stack.isEmpty()) {
+				stack.setDamageValue(stack.getMaxDamage() / 3);
+				return stack;
+			}
+		} catch (Throwable ignored) {
+		}
+		net.minecraft.core.Holder<net.minecraft.world.item.Item> holder = net.minecraft.core.Holder.direct(item, net.minecraft.core.component.DataComponentMap.EMPTY);
+		ItemStack stack = new ItemStack(holder);
+		stack.set(net.minecraft.core.component.DataComponents.MAX_DAMAGE, maxDamage);
+		stack.set(net.minecraft.core.component.DataComponents.DAMAGE, maxDamage / 3);
+		stack.set(net.minecraft.core.component.DataComponents.ITEM_MODEL, net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item));
+		return stack;
+	}
 }
-
-
-
