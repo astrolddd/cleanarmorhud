@@ -122,7 +122,7 @@ public class NumberStepperWidget extends Widget {
 	}
 
 	private void stepValue(int delta) {
-		int next = Math.clamp(value + delta, min, max);
+		int next = (int) Math.clamp((long) value + delta, (long) min, (long) max);
 		if (next != value || !text.equals(String.valueOf(next))) {
 			value = next;
 			text = String.valueOf(value);

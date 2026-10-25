@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class CleanHudAutoTestRunner {
 	private static final Logger LOGGER = LoggerFactory.getLogger("CleanHudAutoTest");
@@ -78,122 +79,22 @@ public class CleanHudAutoTestRunner {
 					});
 				}
 			}
-			case 2 -> {
-				if (stepTicks == 12) {
-					capture(client, "02_config_tab1_position.png", () -> {
-						step = 3;
-						stepTicks = 0;
-						configScreen.switchTab(2);
-					});
-				}
-			}
-			case 3 -> {
-				if (stepTicks == 12) {
-					capture(client, "03_config_tab2_durability.png", () -> {
-						step = 4;
-						stepTicks = 0;
-						configScreen.switchTab(3);
-					});
-				}
-			}
-			case 4 -> {
-				if (stepTicks == 12) {
-					capture(client, "04_config_tab3_warnings.png", () -> {
-						step = 5;
-						stepTicks = 0;
-						configScreen.switchTab(4);
-					});
-				}
-			}
-			case 5 -> {
-				if (stepTicks == 12) {
-					capture(client, "05_config_tab4_gui.png", () -> {
-						step = 6;
-						stepTicks = 0;
-					});
-				}
-			}
-			case 6 -> {
-				if (stepTicks == 2) {
-					ArmorHudConfig cfg = new ArmorHudConfig();
-					cfg.enabled = true;
-					cfg.alignment = HudAlignment.VERTICAL;
-					cfg.durabilityMode = DurabilityMode.NUMERIC;
-					cfg.showDurabilityBar = true;
-					cfg.showOffhandItem = true;
-					cfg.showMainHandItem = true;
-					cfg.mainHandPosition = MainHandPosition.ABOVE;
-					cfg.setRelativePosition(60, 120, 854, 480);
-
-					List<ItemStack> stacks = createMockArmorSet(0.6f);
-					client.setScreenAndShow(new CleanHudTestScreen("Vertical Clean HUD (Offhand -1, Mainhand -2 Above Armor)", cfg, stacks));
-				} else if (stepTicks == 12) {
-					capture(client, "06_hud_vertical_offhand_priority.png", () -> {
-						step = 7;
-						stepTicks = 0;
-					});
-				}
-			}
-			case 7 -> {
-				if (stepTicks == 2) {
-					ArmorHudConfig cfg = new ArmorHudConfig();
-					cfg.enabled = true;
-					cfg.alignment = HudAlignment.HORIZONTAL;
-					cfg.durabilityMode = DurabilityMode.PERCENTAGE;
-					cfg.showDurabilityBar = true;
-					cfg.showOffhandItem = true;
-					cfg.showMainHandItem = true;
-					cfg.mainHandPosition = MainHandPosition.ABOVE;
-					cfg.setRelativePosition(200, 120, 854, 480);
-
-					List<ItemStack> stacks = createMockArmorSet(0.75f);
-					client.setScreenAndShow(new CleanHudTestScreen("Horizontal Clean HUD (Percentage + Durability Bars)", cfg, stacks));
-				} else if (stepTicks == 12) {
-					capture(client, "07_hud_horizontal.png", () -> {
-						step = 8;
-						stepTicks = 0;
-					});
-				}
-			}
-			case 8 -> {
-				if (stepTicks == 2) {
-					ArmorHudConfig cfg = new ArmorHudConfig();
-					cfg.enabled = true;
-					cfg.alignment = HudAlignment.VERTICAL;
-					cfg.durabilityMode = DurabilityMode.NUMERIC;
-					cfg.durabilityWarning = true;
-					cfg.showDurabilityBar = true;
-					cfg.setRelativePosition(60, 120, 854, 480);
-
-					List<ItemStack> stacks = createMockArmorSet(0.08f);
-					client.setScreenAndShow(new CleanHudTestScreen("Low Durability Warning Alert (8% remaining)", cfg, stacks));
-				} else if (stepTicks == 12) {
-					capture(client, "08_hud_warning_low_durability.png", () -> {
-						step = 9;
-						stepTicks = 0;
-					});
-				}
-			}
-			case 9 -> {
-				if (stepTicks == 2) {
-					ArmorHudConfig cfg = new ArmorHudConfig();
-					cfg.enabled = true;
-					cfg.setVanillaStyle(true);
-					cfg.alignment = HudAlignment.VERTICAL;
-					cfg.showOffhandItem = true;
-					cfg.showMainHandItem = true;
-					cfg.mainHandPosition = MainHandPosition.ABOVE;
-					cfg.setRelativePosition(60, 120, 854, 480);
-
-					List<ItemStack> stacks = createMockArmorSet(0.7f);
-					client.setScreenAndShow(new CleanHudTestScreen("Vanilla Style Vertical (Offhand -1 Below Mainhand -2)", cfg, stacks));
-				} else if (stepTicks == 12) {
-					capture(client, "09_vanilla_vertical_both_hands.png", () -> {
-						step = 10;
-						stepTicks = 0;
-					});
-				}
-			}
+			case 2 -> switchTabAndCapture(client, 3, 2, "02_config_tab1_position.png");
+			case 3 -> switchTabAndCapture(client, 4, 3, "03_config_tab2_durability.png");
+			case 4 -> switchTabAndCapture(client, 5, 4, "04_config_tab3_warnings.png");
+			case 5 -> switchTabAndCapture(client, 6, -1, "05_config_tab4_gui.png");
+			case 6 -> runHudStage(client, 7, "Vertical Clean HUD (Offhand -1, Mainhand -2 Above Armor)",
+				() -> createTestConfig(HudAlignment.VERTICAL, DurabilityMode.NUMERIC, false, false, 60, 120),
+				0.6f, "06_hud_vertical_offhand_priority.png");
+			case 7 -> runHudStage(client, 8, "Horizontal Clean HUD (Percentage + Durability Bars)",
+				() -> createTestConfig(HudAlignment.HORIZONTAL, DurabilityMode.PERCENTAGE, false, false, 200, 120),
+				0.75f, "07_hud_horizontal.png");
+			case 8 -> runHudStage(client, 9, "Low Durability Warning Alert (8% remaining)",
+				() -> createTestConfig(HudAlignment.VERTICAL, DurabilityMode.NUMERIC, true, false, 60, 120),
+				0.08f, "08_hud_warning_low_durability.png");
+			case 9 -> runHudStage(client, 10, "Vanilla Style Vertical (Offhand -1 Below Mainhand -2)",
+				() -> createTestConfig(HudAlignment.VERTICAL, DurabilityMode.NUMERIC, false, true, 60, 120),
+				0.7f, "09_vanilla_vertical_both_hands.png");
 			case 10 -> {
 				if (stepTicks == 2) {
 					repositionConfig = new ArmorHudConfig();
@@ -228,6 +129,44 @@ public class CleanHudAutoTestRunner {
 				client.stop();
 			}
 		}
+	}
+
+	private static void switchTabAndCapture(Minecraft client, int nextStep, int nextTab, String filename) {
+		if (stepTicks == 12) {
+			capture(client, filename, () -> {
+				step = nextStep;
+				stepTicks = 0;
+				if (configScreen != null && nextTab >= 0) {
+					configScreen.switchTab(nextTab);
+				}
+			});
+		}
+	}
+
+	private static void runHudStage(Minecraft client, int nextStep, String title, Supplier<ArmorHudConfig> cfgSupplier, float health, String filename) {
+		if (stepTicks == 2) {
+			client.setScreenAndShow(new CleanHudTestScreen(title, cfgSupplier.get(), createMockArmorSet(health)));
+		} else if (stepTicks == 12) {
+			capture(client, filename, () -> {
+				step = nextStep;
+				stepTicks = 0;
+			});
+		}
+	}
+
+	private static ArmorHudConfig createTestConfig(HudAlignment alignment, DurabilityMode mode, boolean warning, boolean vanilla, int posX, int posY) {
+		ArmorHudConfig cfg = new ArmorHudConfig();
+		cfg.enabled = true;
+		cfg.setVanillaStyle(vanilla);
+		cfg.alignment = alignment;
+		cfg.durabilityMode = mode;
+		cfg.durabilityWarning = warning;
+		cfg.showDurabilityBar = true;
+		cfg.showOffhandItem = true;
+		cfg.showMainHandItem = true;
+		cfg.mainHandPosition = MainHandPosition.ABOVE;
+		cfg.setRelativePosition(posX, posY, 854, 480);
+		return cfg;
 	}
 
 	private static List<ItemStack> createMockArmorSet(float healthFraction) {
